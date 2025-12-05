@@ -4,6 +4,7 @@ import { KeyManagerModal } from './components/KeyManagerModal';
 import { RefreshCw, Calendar, ShieldCheck, Zap, Globe, AlertCircle, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { FactoryLogo } from './components/FactoryLogo';
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -98,9 +99,12 @@ function App() {
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              {t('title')}
-            </h1>
+            <div className="flex items-center gap-3">
+              <FactoryLogo className="h-8 text-blue-400" />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                {t('title')}
+              </h1>
+            </div>
             <p className="text-slate-400 mt-2 flex items-center gap-2">
               <ShieldCheck size={16} className="text-blue-500" />
               {t('subtitle')}
