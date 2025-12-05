@@ -5,7 +5,7 @@ const resources = {
     en: {
         translation: {
             "title": "Factory AI Usage",
-            "subtitle": "Organization Dashboard",
+            "subtitle": "Usage Overview",
             "currentPeriod": "Current Period",
             "remaining": "Remaining",
             "days": "Days",
@@ -34,7 +34,7 @@ const resources = {
     zh: {
         translation: {
             "title": "Factory AI 用量统计",
-            "subtitle": "组织仪表盘",
+            "subtitle": "用量概览",
             "currentPeriod": "当前周期",
             "remaining": "剩余时间",
             "days": "天",
