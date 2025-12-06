@@ -1,16 +1,36 @@
-# React + Vite
+# Factory AI Usage Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[中文文档](./README_CN.md)
 
-Currently, two official plugins are available:
+A tool to check your Factory AI API token usage and remaining quota.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## How it works
 
-## React Compiler
+Fetches usage data from Factory AI's `/api/organization/members/chat-usage` endpoint.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+- **Keys stored locally** - API Keys are saved in browser localStorage, never uploaded to any server
+- **Multi-key management** - Save multiple keys and switch between them
+- **Bilingual** - English and Chinese interface
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Usage
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build
+npm run build
+```
+
+## Deployment
+
+Production requires a proxy to forward `/api` requests to `https://app.factory.ai`.
+
+## License
+
+For personal learning and non-commercial use only.

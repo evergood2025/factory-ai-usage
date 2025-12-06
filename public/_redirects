@@ -1,0 +1,2 @@
+# Proxy /api requests to app.factory.ai with a 200 status (rewrite)
+/api/*  https://app.factory.ai/api/:splat  200
