@@ -18,13 +18,13 @@
 
 ```bash
 # 安装依赖
-npm install
+bun install
 
 # 启动
-npm run dev
+bun dev
 
 # 构建
-npm run build
+bun run build
 ```
 
 ## 部署

@@ -18,13 +18,13 @@ Fetches usage data from Factory AI's `/api/organization/members/chat-usage` endp
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Start dev server
-npm run dev
+bun dev
 
 # Build
-npm run build
+bun run build
 ```
 
 ## Deployment
