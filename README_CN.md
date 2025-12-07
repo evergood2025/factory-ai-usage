@@ -4,6 +4,8 @@
 
 一个 Factory AI API 用量查看工具，输入 API Key 即可查看当前 Token 消耗和剩余额度。
 
+![预览](./screenshots/preview.jpg)
+
 ## 工作原理
 
 通过 Factory AI 的 `/api/organization/members/chat-usage` 接口获取用量数据，前端展示。

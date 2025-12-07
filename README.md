@@ -4,6 +4,8 @@
 
 A tool to check your Factory AI API token usage and remaining quota.
 
+![Preview](./screenshots/preview.jpg)
+
 ## How it works
 
 Fetches usage data from Factory AI's `/api/organization/members/chat-usage` endpoint.
