@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Check, Key } from 'lucide-react';
+import { X, Plus, Trash2, Check, Key, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, onDeleteKey, onSelectKey }) => {
     const { t } = useTranslation();
     const [newKey, setNewKey] = useState('');
+    const [copiedKey, setCopiedKey] = useState(null);
+
+    const handleCopy = async (key) => {
+        await navigator.clipboard.writeText(key);
+        setCopiedKey(key);
+        setTimeout(() => setCopiedKey(null), 2000);
+    };
 
     const handleAdd = () => {
         if (newKey.trim()) {
@@ -100,6 +107,14 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                                                     {t('use')}
                                                 </button>
                                             )}
+
+                                            <button
+                                                onClick={() => handleCopy(key)}
+                                                className="text-slate-500 hover:text-blue-400 p-1.5 hover:bg-blue-400/10 rounded transition-colors"
+                                                title={t('copy')}
+                                            >
+                                                {copiedKey === key ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                                            </button>
 
                                             <button
                                                 onClick={() => onDeleteKey(key)}

@@ -27,6 +27,7 @@ const resources = {
             "addKeyHint": "Click here to add your API Key",
             "active": "Active",
             "delete": "Delete",
+            "copy": "Copy",
             "use": "Use",
             "keyPlaceholder": "sk-..."
         }
@@ -56,6 +57,7 @@ const resources = {
             "addKeyHint": "点击这里添加 API 密钥",
             "active": "使用中",
             "delete": "删除",
+            "copy": "复制",
             "use": "切换",
             "keyPlaceholder": "sk-..."
         }
