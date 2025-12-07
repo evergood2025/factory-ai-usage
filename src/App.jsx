@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UsageCard } from './components/UsageCard';
 import { KeyManagerModal } from './components/KeyManagerModal';
-import { RefreshCw, Calendar, ShieldCheck, Zap, Globe, AlertCircle, Settings } from 'lucide-react';
+import { RefreshCw, Calendar, ShieldCheck, Zap, Globe, AlertCircle, Settings, Github } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { FactoryLogo } from './components/FactoryLogo';
@@ -160,6 +160,16 @@ function App() {
               >
                 <Globe size={20} />
               </button>
+
+              <a
+                href="https://github.com/evergood2025/factory-ai-usage"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-4 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
+                title="GitHub"
+              >
+                <Github size={20} />
+              </a>
             </div>
           </div>
         </header>

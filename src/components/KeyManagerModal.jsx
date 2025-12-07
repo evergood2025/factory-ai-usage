@@ -52,6 +52,9 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                     {/* Body */}
                     <div className="p-6 space-y-6">
 
+                        {/* Security Notice */}
+                        <p className="text-xs text-slate-400">{t('keySecurityNotice')}</p>
+
                         {/* Add Key Input */}
                         <div className="flex gap-2">
                             <input
