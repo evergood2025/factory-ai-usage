@@ -4,7 +4,9 @@
 
 一个 Factory AI API 用量查看工具，输入 API Key 即可查看当前 Token 消耗和剩余额度。
 
-![预览](./screenshots/preview.jpg)
+![预览 1](./screenshots/preview.jpg)
+
+![预览 2](./screenshots/preview2.jpg)
 
 ## 工作原理
 
@@ -14,6 +16,7 @@
 
 - **Key 存储在本地浏览器** - API Key 保存在 localStorage，不会上传到服务器
 - **多 Key 管理** - 支持保存多个 Key，方便切换查看
+- **批量操作** - 支持批量添加、同时查看以及导出多个 API Key
 - **中英文切换** - 支持中文和英文界面
 
 ## 使用

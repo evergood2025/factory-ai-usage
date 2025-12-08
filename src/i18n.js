@@ -30,7 +30,12 @@ const resources = {
             "delete": "Delete",
             "copy": "Copy",
             "use": "Use",
-            "keyPlaceholder": "sk-..."
+            "keyPlaceholder": "sk-...",
+            "addKeysLabel": "Enter API Keys (one per line or comma-separated)",
+            "standard": "Standard",
+            "premium": "Premium",
+            "export": "Export",
+            "exportKeys": "Export All Keys"
         }
     },
     zh: {
@@ -61,7 +66,12 @@ const resources = {
             "delete": "删除",
             "copy": "复制",
             "use": "切换",
-            "keyPlaceholder": "sk-..."
+            "keyPlaceholder": "sk-...",
+            "addKeysLabel": "输入 API 密钥 (支持换行或逗号分隔)",
+            "standard": "标准",
+            "premium": "高级",
+            "export": "导出",
+            "exportKeys": "导出所有密钥"
         }
     }
 };

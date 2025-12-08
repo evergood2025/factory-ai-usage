@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Check, Key, Copy } from 'lucide-react';
+import { X, Plus, Trash2, Check, Key, Copy, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, onDeleteKey, onSelectKey }) => {
+export const KeyManagerModal = ({ isOpen, onClose, keys, onAddKeys, onDeleteKey }) => {
     const { t } = useTranslation();
-    const [newKey, setNewKey] = useState('');
+    const [inputKeys, setInputKeys] = useState('');
     const [copiedKey, setCopiedKey] = useState(null);
 
     const handleCopy = async (key) => {
@@ -14,10 +14,31 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
         setTimeout(() => setCopiedKey(null), 2000);
     };
 
+    const handleExport = () => {
+        const content = keys.join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `factory-ai-keys-${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     const handleAdd = () => {
-        if (newKey.trim()) {
-            onAddKey(newKey.trim());
-            setNewKey('');
+        if (!inputKeys.trim()) return;
+
+        // Split by newline or comma, trim whitespace, remove empty strings
+        const newKeys = inputKeys
+            .split(/[\n,]+/)
+            .map(k => k.trim())
+            .filter(k => k.length > 0);
+
+        if (newKeys.length > 0) {
+            onAddKeys(newKeys);
+            setInputKeys('');
         }
     };
 
@@ -36,7 +57,7 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                    className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
@@ -44,9 +65,21 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                             <Key size={20} className="text-blue-400" />
                             {t('manageKeys')}
                         </h2>
-                        <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-                            <X size={20} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {keys.length > 0 && (
+                                <button
+                                    onClick={handleExport}
+                                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors flex items-center gap-2"
+                                    title={t('exportKeys')}
+                                >
+                                    <Download size={18} />
+                                    <span className="text-sm font-medium">{t('export')}</span>
+                                </button>
+                            )}
+                            <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Body */}
@@ -56,23 +89,26 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                         <p className="text-xs text-slate-400">{t('keySecurityNotice')}</p>
 
                         {/* Add Key Input */}
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={newKey}
-                                onChange={(e) => setNewKey(e.target.value)}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-slate-300">
+                                {t('addKeysLabel')}
+                            </label>
+                            <textarea
+                                value={inputKeys}
+                                onChange={(e) => setInputKeys(e.target.value)}
                                 placeholder={t('keyPlaceholder')}
-                                className="flex-1 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-h-[100px] resize-none font-mono"
                             />
-                            <button
-                                onClick={handleAdd}
-                                disabled={!newKey.trim()}
-                                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                            >
-                                <Plus size={16} />
-                                {t('add')}
-                            </button>
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleAdd}
+                                    disabled={!inputKeys.trim()}
+                                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                                >
+                                    <Plus size={16} />
+                                    {t('add')}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Key List */}
@@ -85,32 +121,16 @@ export const KeyManagerModal = ({ isOpen, onClose, keys, activeKey, onAddKey, on
                                 keys.map((key, index) => (
                                     <div
                                         key={index}
-                                        className={`flex items-center justify-between p-3 rounded-lg border transition-all ${key === activeKey
-                                                ? 'bg-blue-500/10 border-blue-500/30'
-                                                : 'bg-slate-700/30 border-slate-700/50 hover:bg-slate-700/50'
-                                            }`}
+                                        className="flex items-center justify-between p-3 rounded-lg border bg-slate-700/30 border-slate-700/50 hover:bg-slate-700/50 transition-all"
                                     >
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className={`w-2 h-2 rounded-full ${key === activeKey ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]' : 'bg-slate-600'}`} />
+                                            <div className="w-2 h-2 rounded-full bg-slate-600" />
                                             <span className="text-sm font-mono text-slate-300 truncate" title={key}>
                                                 {maskKey(key)}
                                             </span>
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            {key === activeKey ? (
-                                                <span className="text-xs font-medium text-blue-400 px-2 py-1 bg-blue-400/10 rounded">
-                                                    {t('active')}
-                                                </span>
-                                            ) : (
-                                                <button
-                                                    onClick={() => onSelectKey(key)}
-                                                    className="text-xs font-medium text-slate-400 hover:text-white px-2 py-1 hover:bg-slate-600 rounded transition-colors"
-                                                >
-                                                    {t('use')}
-                                                </button>
-                                            )}
-
                                             <button
                                                 onClick={() => handleCopy(key)}
                                                 className="text-slate-500 hover:text-blue-400 p-1.5 hover:bg-blue-400/10 rounded transition-colors"

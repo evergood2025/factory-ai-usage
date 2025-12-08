@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UsageCard } from './components/UsageCard';
 import { KeyManagerModal } from './components/KeyManagerModal';
-import { RefreshCw, Calendar, ShieldCheck, Zap, Globe, AlertCircle, Settings, Github } from 'lucide-react';
+import { KeyUsageRow } from './components/KeyUsageRow';
+import { RefreshCw, ShieldCheck, Globe, AlertCircle, Settings, Github, LayoutGrid, List } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { FactoryLogo } from './components/FactoryLogo';
@@ -9,52 +10,65 @@ import { FactoryLogo } from './components/FactoryLogo';
 function App() {
   const { t, i18n } = useTranslation();
 
-  // State for Data
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   // State for Keys
   const [keys, setKeys] = useState(() => {
     const saved = localStorage.getItem('api_keys');
     return saved ? JSON.parse(saved) : [];
   });
-  const [activeKey, setActiveKey] = useState(() => {
-    return localStorage.getItem('active_key') || '';
-  });
+
+  // State for Data: { [key]: { status: 'idle'|'loading'|'success'|'error', data: null, error: null } }
+  const [results, setResults] = useState({});
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
 
   // Persist Keys
   useEffect(() => {
     localStorage.setItem('api_keys', JSON.stringify(keys));
-    if (keys.length > 0 && !keys.includes(activeKey)) {
-      // If active key was deleted, switch to the first one or empty
-      setActiveKey(keys[0]);
-    } else if (keys.length === 0) {
-      setActiveKey('');
-    }
   }, [keys]);
 
+  // Initial Fetch & Sync Results Map
   useEffect(() => {
-    if (activeKey) {
-      localStorage.setItem('active_key', activeKey);
-      fetchData(); // Fetch when active key changes
-    } else {
-      setData(null); // No key, no data
-    }
-  }, [activeKey]);
+    // initialize results for new keys
+    setResults(prev => {
+      const next = { ...prev };
+      let changed = false;
+      keys.forEach(key => {
+        if (!next[key]) {
+          next[key] = { status: 'idle', data: null, error: null };
+          changed = true;
+        }
+      });
+      // Remove deleted keys
+      Object.keys(next).forEach(key => {
+        if (!keys.includes(key)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [keys]);
 
-  const fetchData = async () => {
-    if (!activeKey) return;
+  // Trigger fetch for idle keys (e.g. on load)
+  useEffect(() => {
+    keys.forEach(key => {
+      if (results[key]?.status === 'idle') {
+        fetchUsageForKey(key);
+      }
+    });
+  }, [keys, results]);
 
-    setLoading(true);
-    setError(null);
+  const fetchUsageForKey = async (key) => {
+    setResults(prev => ({
+      ...prev,
+      [key]: { ...(prev[key] || {}), status: 'loading', error: null }
+    }));
 
     try {
       const response = await fetch('/api/organization/members/chat-usage', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${activeKey}`,
+          'Authorization': `Bearer ${key}`,
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
       });
@@ -64,14 +78,22 @@ function App() {
       }
 
       const result = await response.json();
-      setData(result);
+      setResults(prev => ({
+        ...prev,
+        [key]: { status: 'success', data: result, error: null }
+      }));
     } catch (err) {
-      console.warn("Fetch failed:", err);
-      setError(err.message || 'Failed to fetch data');
-    } finally {
-      setLoading(false);
+      console.warn(`Fetch failed for key ${key}:`, err);
+      setResults(prev => ({
+        ...prev,
+        [key]: { status: 'error', data: null, error: err.message || 'Failed to fetch data' }
+      }));
     }
   };
+
+  const refreshAll = useCallback(() => {
+    keys.forEach(key => fetchUsageForKey(key));
+  }, [keys]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'zh' : 'en';
@@ -79,98 +101,97 @@ function App() {
   };
 
   // Key Management Handlers
-  const handleAddKey = (key) => {
-    if (!keys.includes(key)) {
-      const newKeys = [...keys, key];
-      setKeys(newKeys);
-      if (!activeKey) setActiveKey(key); // Auto select if it's the first one
+  const handleAddKeys = (newKeysList) => {
+    // Filter duplicates
+    const uniqueNewKeys = newKeysList.filter(k => !keys.includes(k));
+    if (uniqueNewKeys.length > 0) {
+      setKeys(prev => [...prev, ...uniqueNewKeys]);
+      // Trigger fetch immediately handled by effect, or we can force it here?
+      // Effect 'results' sync will set them to idle, then separate effect will fetch.
     }
+    setIsKeyModalOpen(false);
   };
 
   const handleDeleteKey = (keyToDelete) => {
-    const newKeys = keys.filter(k => k !== keyToDelete);
-    setKeys(newKeys);
+    setKeys(prev => prev.filter(k => k !== keyToDelete));
+  };
+
+  const maskKey = (key) => {
+    if (key.length <= 8) return key;
+    return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans selection:bg-blue-500/30">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-8 font-sans selection:bg-blue-500/30">
+      <div className="max-w-6xl mx-auto">
 
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+        <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 border-b border-slate-800/50 pb-6">
           <div>
             <div className="flex items-center gap-3">
               <FactoryLogo className="h-8 text-blue-400" />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 {t('title')}
               </h1>
             </div>
-            <p className="text-slate-400 mt-2 flex items-center gap-2">
+            <p className="text-slate-400 mt-2 flex items-center gap-2 text-sm">
               <ShieldCheck size={16} className="text-blue-500" />
               {t('subtitle')}
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            {data && (
-              <div className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm">
-                <div className="flex flex-col">
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t('currentPeriod')}</span>
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-200 mt-1">
-                    <Calendar size={16} className="text-slate-400" />
-                    <span>{format(new Date(data.usage.startDate), 'MMM d, yyyy')}</span>
-                    <span className="text-slate-600">→</span>
-                    <span>{format(new Date(data.usage.endDate), 'MMM d, yyyy')}</span>
-                  </div>
-                </div>
-                <div className="h-8 w-px bg-slate-700 mx-2"></div>
-                <div className="text-right">
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t('remaining')}</span>
-                  <p className="text-sm font-medium text-emerald-400 mt-1">
-                    {Math.ceil((new Date(data.usage.endDate) - new Date()) / (1000 * 60 * 60 * 24))} {t('days')}
-                  </p>
-                </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Toggle */}
+            {keys.length > 0 && (
+              <div className="bg-slate-800/50 p-1 rounded-lg border border-slate-700/50 flex">
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                  title="Card View"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                  title="List View"
+                >
+                  <List size={18} />
+                </button>
               </div>
             )}
 
-            <div className="flex gap-2">
-              <div className="relative">
-                <button
-                  onClick={() => setIsKeyModalOpen(true)}
-                  className="p-4 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white flex items-center gap-2"
-                  title={t('manageKeys')}
-                >
-                  <Settings size={20} />
-                  <span className="md:hidden">{t('settings')}</span>
-                </button>
-                {keys.length === 0 && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap z-20">
-                    <div className="relative bg-blue-500 text-white text-sm px-3 py-2 rounded-lg shadow-lg animate-pulse">
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-blue-500"></div>
-                      {t('addKeyHint')}
-                    </div>
-                  </div>
-                )}
-              </div>
+            <button
+              onClick={() => setIsKeyModalOpen(true)}
+              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
+              title={t('manageKeys')}
+            >
+              <Settings size={18} />
+            </button>
 
-              <button
-                onClick={toggleLanguage}
-                className="p-4 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
-                title="Switch Language"
-              >
-                <Globe size={20} />
-              </button>
+            <button
+              onClick={refreshAll}
+              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
+              title={t('refreshData')}
+            >
+              <RefreshCw size={18} />
+            </button>
 
-              <a
-                href="https://github.com/evergood2025/factory-ai-usage"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-4 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
-                title="GitHub"
-              >
-                <Github size={20} />
-              </a>
-            </div>
+            <button
+              onClick={toggleLanguage}
+              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
+            >
+              <Globe size={18} />
+            </button>
+
+            <a
+              href="https://github.com/evergood2025/factory-ai-usage"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700/50 transition-colors text-slate-400 hover:text-white"
+            >
+              <Github size={18} />
+            </a>
           </div>
         </header>
 
@@ -179,101 +200,123 @@ function App() {
           isOpen={isKeyModalOpen}
           onClose={() => setIsKeyModalOpen(false)}
           keys={keys}
-          activeKey={activeKey}
-          onAddKey={handleAddKey}
+          onAddKeys={handleAddKeys}
           onDeleteKey={handleDeleteKey}
-          onSelectKey={(k) => {
-            setActiveKey(k);
-            // setIsKeyModalOpen(false); // Optional: close on select
-          }}
         />
 
-        {/* Error Notification */}
-        {error && (
-          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-sm flex items-center gap-2">
-            <AlertCircle size={16} />
-            <span>{t('fetchError')}: {error}</span>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading && !data && (
-          <div className="min-h-[400px] flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-
-        {/* No Data / No Key State */}
-        {!loading && !data && (
-          <div className="min-h-[400px] flex flex-col items-center justify-center text-slate-500 space-y-4">
+        {/* Empty State */}
+        {keys.length === 0 && (
+          <div className="min-h-[400px] flex flex-col items-center justify-center text-slate-500 space-y-4 bg-slate-800/20 rounded-3xl border-2 border-dashed border-slate-700/50">
             <ShieldCheck size={48} className="opacity-20" />
-            <p>{keys.length === 0 ? t('noKeys') : "Select a key to view usage"}</p>
+            <p>{t('noKeys')}</p>
             <button
               onClick={() => setIsKeyModalOpen(true)}
-              className="text-blue-400 hover:text-blue-300 underline"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors"
             >
-              {t('manageKeys')}
+              {t('addKeyHint')}
             </button>
           </div>
         )}
 
-        {/* Cards Grid */}
-        {data && (
-          <>
-            <div className="relative">
-              {loading && (
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="bg-slate-900/80 p-4 rounded-full backdrop-blur-sm border border-slate-700/50 shadow-2xl">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                </div>
-              )}
+        {/* Content */}
+        {keys.length > 0 && (
+          <div className="space-y-8 animate-in fade-in duration-500">
 
-              <div className={loading ? "opacity-40 blur-sm transition-all duration-500" : "transition-all duration-500"}>
-                {/* Cards Grid */}
-                {(() => {
+            {/* List View */}
+            {viewMode === 'list' && (
+              <div className="flex flex-col gap-3">
+                {keys.map(key => (
+                  <KeyUsageRow
+                    key={key}
+                    apiKey={key}
+                    data={results[key]?.data}
+                    loading={results[key]?.status === 'loading' || results[key]?.status === 'idle'}
+                    error={results[key]?.error}
+                    onDelete={() => handleDeleteKey(key)}
+                    onRefresh={() => fetchUsageForKey(key)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Card View */}
+            {viewMode === 'card' && (
+              <div className="flex flex-wrap justify-center items-start gap-6">
+                {keys.map(key => {
+                  const result = results[key];
+                  const data = result?.data;
+                  const loading = result?.status === 'loading' || result?.status === 'idle';
+                  const error = result?.error;
+
+                  if (loading) {
+                    return (
+                      <div key={key} className="w-full max-w-md min-h-[300px] bg-slate-800/30 rounded-2xl border border-slate-700/30 flex items-center justify-center animate-pulse">
+                        <div className="flex flex-col items-center gap-3">
+                          <RefreshCw className="animate-spin text-slate-500" size={24} />
+                          <span className="text-slate-500 text-sm font-mono">{maskKey(key)}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (error) {
+                    return (
+                      <div key={key} className="w-full max-w-md min-h-[200px] bg-slate-800/30 rounded-2xl border border-red-500/30 p-6 flex flex-col items-center justify-center text-center gap-3">
+                        <AlertCircle className="text-red-400" size={32} />
+                        <span className="text-slate-400 text-sm font-mono">{maskKey(key)}</span>
+                        <span className="text-red-400 text-sm">{t('fetchError')}</span>
+                        <button
+                          onClick={() => fetchUsageForKey(key)}
+                          className="text-blue-400 hover:underline text-sm"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (!data) return null;
+
+                  // If multiple plans, rendering multiple cards feels redundant in terms of "UsageCard" size, 
+                  // but necessary to show details. We keep them adjacent.
                   const showStandard = data.usage.standard.totalAllowance > 0;
                   const showPremium = data.usage.premium.totalAllowance > 0;
-                  const singleCard = showStandard !== showPremium; // XOR, true if only one is shown
+                  const dateRange = { startDate: data.usage.startDate, endDate: data.usage.endDate };
 
                   return (
-                    <div className={singleCard ? "flex justify-center" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
+                    <React.Fragment key={key}>
                       {showStandard && (
-                        <div className={singleCard ? "w-full max-w-[500px]" : ""}>
+                        <div className="relative group w-full max-w-md">
+                          <div className="absolute -top-3 left-4 px-2 bg-slate-900 border border-slate-700 rounded text-xs text-slate-400 font-mono z-10">
+                            {maskKey(key)}
+                          </div>
                           <UsageCard
                             title={t('standardPlan')}
                             usage={data.usage.standard}
                             type="standard"
+                            dateRange={dateRange}
                           />
                         </div>
                       )}
                       {showPremium && (
-                        <div className={singleCard ? "w-full max-w-[500px]" : ""}>
+                        <div className="relative group w-full max-w-md">
+                          <div className="absolute -top-3 left-4 px-2 bg-slate-900 border border-slate-700 rounded text-xs text-slate-400 font-mono z-10">
+                            {maskKey(key)}
+                          </div>
                           <UsageCard
                             title={t('premiumPlan')}
                             usage={data.usage.premium}
                             type="premium"
+                            dateRange={dateRange}
                           />
                         </div>
                       )}
-                    </div>
+                    </React.Fragment>
                   );
-                })()}
+                })}
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-12 flex justify-center">
-              <button
-                onClick={fetchData}
-                disabled={loading}
-                className={`group flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-medium transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 active:scale-95 ${loading ? 'opacity-80 cursor-not-allowed' : ''}`}
-              >
-                <RefreshCw size={18} className={`group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
-                {t('refreshData')}
-              </button>
-            </div>
-          </>
+            )}
+          </div>
         )}
 
       </div>

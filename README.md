@@ -4,7 +4,9 @@
 
 A tool to check your Factory AI API token usage and remaining quota.
 
-![Preview](./screenshots/preview.jpg)
+![Preview 1](./screenshots/preview.jpg)
+
+![Preview 2](./screenshots/preview2.jpg)
 
 ## How it works
 
@@ -14,6 +16,7 @@ Fetches usage data from Factory AI's `/api/organization/members/chat-usage` endp
 
 - **Keys stored locally** - API Keys are saved in browser localStorage, never uploaded to any server
 - **Multi-key management** - Save multiple keys and switch between them
+- **Batch Operations** - Support batch adding, simultaneous viewing, and exporting of multiple API keys
 - **Bilingual** - English and Chinese interface
 
 ## Usage
